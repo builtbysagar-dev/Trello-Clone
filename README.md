@@ -2,7 +2,7 @@
 
 A modern, production-ready Trello-like Kanban board application built with React, TypeScript, and Supabase.
 
-![TaskFlow](public/card.jpg)
+![TaskFlow](public/Card.jpg)
 
 ## ✨ Features
 
