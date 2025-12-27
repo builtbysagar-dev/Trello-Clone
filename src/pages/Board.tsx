@@ -11,17 +11,22 @@ import {
 import type { DragStartEvent, DragOverEvent, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import type { Board as BoardType, List as ListType, Card as CardType } from '../types/database';
 import { Header } from '../components/layout/Header';
 import { List } from '../components/board/List';
 import { Card } from '../components/board/Card';
 import { CardModal } from '../components/board/CardModal';
 import { AddForm } from '../components/board/AddForm';
+import { InviteModal } from '../components/board/InviteModal';
+import { MembersList } from '../components/board/MembersList';
 import { Spinner } from '../components/ui/Spinner';
+import { Button } from '../components/ui/Button';
 
 export function Board() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const { user } = useAuth();
 
     const [board, setBoard] = useState<BoardType | null>(null);
     const [lists, setLists] = useState<ListType[]>([]);
@@ -31,6 +36,10 @@ export function Board() {
     const [selectedCard, setSelectedCard] = useState<CardType | null>(null);
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [boardTitle, setBoardTitle] = useState('');
+    const [showInviteModal, setShowInviteModal] = useState(false);
+
+    // Check if current user is board owner
+    const isOwner = user?.id === board?.user_id;
 
     // Configure sensors for drag detection
     const sensors = useSensors(
@@ -369,31 +378,51 @@ export function Board() {
             <Header title={board.title} showBackButton />
 
             {/* Board header */}
-            <div className="px-4 sm:px-6 lg:px-8 py-4">
-                {isEditingTitle ? (
-                    <input
-                        type="text"
-                        value={boardTitle}
-                        onChange={(e) => setBoardTitle(e.target.value)}
-                        onBlur={handleBoardTitleSave}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleBoardTitleSave();
-                            if (e.key === 'Escape') {
-                                setBoardTitle(board.title);
-                                setIsEditingTitle(false);
-                            }
-                        }}
-                        className="text-2xl font-bold bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-1 text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        autoFocus
-                    />
-                ) : (
-                    <h1
-                        onClick={() => setIsEditingTitle(true)}
-                        className="text-2xl font-bold text-white cursor-pointer hover:bg-slate-800/50 rounded-lg px-3 py-1 -ml-3 inline-block transition-colors"
-                    >
-                        {board.title}
-                    </h1>
-                )}
+            <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    {isEditingTitle ? (
+                        <input
+                            type="text"
+                            value={boardTitle}
+                            onChange={(e) => setBoardTitle(e.target.value)}
+                            onBlur={handleBoardTitleSave}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleBoardTitleSave();
+                                if (e.key === 'Escape') {
+                                    setBoardTitle(board.title);
+                                    setIsEditingTitle(false);
+                                }
+                            }}
+                            className="text-2xl font-bold bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-1 text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            autoFocus
+                        />
+                    ) : (
+                        <h1
+                            onClick={() => setIsEditingTitle(true)}
+                            className="text-2xl font-bold text-white cursor-pointer hover:bg-slate-800/50 rounded-lg px-3 py-1 -ml-3 inline-block transition-colors"
+                        >
+                            {board.title}
+                        </h1>
+                    )}
+                </div>
+
+                {/* Members and Invite */}
+                <div className="flex items-center gap-4">
+                    <MembersList boardId={board.id} ownerId={board.user_id} />
+
+                    {isOwner && (
+                        <Button
+                            onClick={() => setShowInviteModal(true)}
+                            variant="secondary"
+                            size="sm"
+                        >
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                            </svg>
+                            Invite
+                        </Button>
+                    )}
+                </div>
             </div>
 
             {/* Board content - horizontal scroll */}
@@ -447,6 +476,16 @@ export function Board() {
                     onClose={() => setSelectedCard(null)}
                     onUpdate={(updates) => handleUpdateCard(selectedCard.id, updates)}
                     onDelete={() => handleDeleteCard(selectedCard.id)}
+                />
+            )}
+
+            {/* Invite modal */}
+            {board && (
+                <InviteModal
+                    isOpen={showInviteModal}
+                    onClose={() => setShowInviteModal(false)}
+                    boardId={board.id}
+                    boardTitle={board.title}
                 />
             )}
         </div>

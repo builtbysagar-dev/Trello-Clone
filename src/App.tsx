@@ -5,6 +5,7 @@ import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
 import { Dashboard } from './pages/Dashboard';
 import { Board } from './pages/Board';
+import { JoinBoard } from './pages/JoinBoard';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/join/:inviteCode" element={<JoinBoard />} />
           <Route
             path="/dashboard"
             element={

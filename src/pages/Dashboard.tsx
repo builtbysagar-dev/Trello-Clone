@@ -12,6 +12,7 @@ import { Spinner } from '../components/ui/Spinner';
 export function Dashboard() {
     const { user } = useAuth();
     const [boards, setBoards] = useState<Board[]>([]);
+    const [sharedBoards, setSharedBoards] = useState<Board[]>([]);
     const [loading, setLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showRenameModal, setShowRenameModal] = useState(false);
@@ -29,16 +30,36 @@ export function Dashboard() {
         if (!user) return;
 
         setLoading(true);
-        const { data, error } = await supabase
+
+        // Fetch boards user owns
+        const { data: ownedBoards, error: ownedError } = await supabase
             .from('boards')
             .select('*')
+            .eq('user_id', user.id)
             .order('created_at', { ascending: false });
 
-        if (error) {
-            console.error('Error fetching boards:', error);
+        if (ownedError) {
+            console.error('Error fetching owned boards:', ownedError);
         } else {
-            setBoards(data || []);
+            setBoards(ownedBoards || []);
         }
+
+        // Fetch boards user is a member of (but doesn't own)
+        const { data: memberBoards, error: memberError } = await supabase
+            .from('board_members')
+            .select('board_id, boards(*)')
+            .eq('user_id', user.id)
+            .eq('role', 'member');
+
+        if (memberError) {
+            console.error('Error fetching shared boards:', memberError);
+        } else {
+            const shared = (memberBoards || [])
+                .map(m => m.boards as unknown as Board)
+                .filter(Boolean);
+            setSharedBoards(shared);
+        }
+
         setLoading(false);
     };
 
@@ -140,7 +161,7 @@ export function Dashboard() {
                     <div className="flex items-center justify-center py-20">
                         <Spinner size="lg" />
                     </div>
-                ) : boards.length === 0 ? (
+                ) : boards.length === 0 && sharedBoards.length === 0 ? (
                     <div className="text-center py-20">
                         <div className="inline-flex items-center justify-center w-20 h-20 bg-slate-800 rounded-2xl mb-6">
                             <svg className="w-10 h-10 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -154,15 +175,44 @@ export function Dashboard() {
                         </Button>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {boards.map((board) => (
-                            <BoardCard
-                                key={board.id}
-                                board={board}
-                                onRename={openRenameModal}
-                                onDelete={openDeleteModal}
-                            />
-                        ))}
+                    <div className="space-y-8">
+                        {/* My Boards */}
+                        {boards.length > 0 && (
+                            <div>
+                                <h2 className="text-lg font-semibold text-white mb-4">My Boards</h2>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                    {boards.map((board) => (
+                                        <BoardCard
+                                            key={board.id}
+                                            board={board}
+                                            onRename={openRenameModal}
+                                            onDelete={openDeleteModal}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Shared Boards */}
+                        {sharedBoards.length > 0 && (
+                            <div>
+                                <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                                    <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                    </svg>
+                                    Shared with me
+                                </h2>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                    {sharedBoards.map((board) => (
+                                        <BoardCard
+                                            key={board.id}
+                                            board={board}
+                                            isShared
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </main>
