@@ -123,10 +123,4 @@ This app uses Supabase Row Level Security (RLS) to ensure:
 - Lists and cards inherit access from board ownership
 - All security is enforced at the database level
 
-## 📄 License
-
-MIT License
-
----
-
 Built with ❤️ using React, TypeScript & Supabase
